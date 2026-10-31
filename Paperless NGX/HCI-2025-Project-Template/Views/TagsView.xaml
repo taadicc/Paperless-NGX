@@ -1,0 +1,476 @@
+﻿<UserControl x:Class="HCI_2025_Project_Template.Views.TagsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:helpers="clr-namespace:HCI_2025_Project_Template.Helpers"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolVis"/>
+        <helpers:HexToBrushConverter x:Key="HexBrush"/>
+        <helpers:HexToContrastBrushConverter x:Key="HexContrast"/>
+    </UserControl.Resources>
+
+    <Grid Background="{DynamicResource Bg.Canvas}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+
+        <Grid Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- ══ ZAGLAVLJE ══════════════════════════════════════════ -->
+            <Grid Grid.Row="0" Margin="28,24,28,16">
+                <StackPanel HorizontalAlignment="Left">
+                    <TextBlock Text="{DynamicResource L_ManageTags}"
+                               Style="{StaticResource T.Caption}"/>
+                    <TextBlock Text="{DynamicResource L_Tags}"
+                               Style="{StaticResource T.Display}" Margin="0,2,0,0"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
+                            VerticalAlignment="Center">
+                    <Button Command="{Binding RefreshCommand}"
+                            Style="{StaticResource MaterialDesignIconButton}"
+                            Width="38" Height="38" Margin="0,0,10,0"
+                            ToolTip="{DynamicResource L_Refresh}"
+                            Foreground="{DynamicResource Text.Secondary}">
+                        <materialDesign:PackIcon Kind="Refresh" Width="19" Height="19"/>
+                    </Button>
+                    <Button Command="{Binding OpenCreateFormCommand}"
+                            Style="{StaticResource Btn.Primary}">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Plus" Width="17" Height="17"
+                                                     Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource L_NewTag}"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <!-- ══ ALATNA TRAKA: pretraga, sortiranje, brojac ══════════ -->
+            <Border Grid.Row="1" Style="{StaticResource Card.Surface}"
+                    Margin="28,0,28,16" Padding="14,12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Pretraga -->
+                    <Border Grid.Column="0" Style="{StaticResource Box.Sunken}"
+                            Padding="12,0" Height="40">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <materialDesign:PackIcon Kind="Magnify" Width="17" Height="17"
+                                                     VerticalAlignment="Center"
+                                                     Foreground="{DynamicResource Text.Tertiary}"/>
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                     Background="Transparent" BorderThickness="0"
+                                     Foreground="{DynamicResource Text.Primary}"
+                                     VerticalAlignment="Center" FontSize="13"
+                                     Margin="10,0,6,0"
+                                     materialDesign:HintAssist.Hint="{DynamicResource L_SearchTags}"
+                                     materialDesign:HintAssist.Foreground="{DynamicResource Text.Tertiary}"/>
+                            <Button Grid.Column="2" Command="{Binding ClearSearchCommand}"
+                                    Style="{StaticResource MaterialDesignIconButton}"
+                                    Width="26" Height="26"
+                                    Visibility="{Binding HasSearch, Converter={StaticResource BoolVis}}"
+                                    Foreground="{DynamicResource Text.Tertiary}">
+                                <materialDesign:PackIcon Kind="Close" Width="13" Height="13"/>
+                            </Button>
+                        </Grid>
+                    </Border>
+
+                    <!-- Sortiranje -->
+                    <ComboBox Grid.Column="1" Width="200" Height="40" Margin="12,0,0,0"
+                              VerticalAlignment="Center"
+                              VerticalContentAlignment="Center"
+                              FontSize="12.5" Padding="12,0"
+                              ItemsSource="{Binding SortOptions}"
+                              SelectedItem="{Binding SelectedSort, Mode=TwoWay}"
+                              Foreground="{DynamicResource Text.Primary}"
+                              Style="{StaticResource MaterialDesignComboBox}"/>
+
+                    <!-- Brojac -->
+                    <Border Grid.Column="2" Background="{DynamicResource Accent.Subtle}"
+                            BorderBrush="{DynamicResource Accent.Border}" BorderThickness="1"
+                            CornerRadius="10" Padding="14,0" Height="40" Margin="12,0,0,0">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding FilteredTags.Count}"
+                                       FontSize="17" FontWeight="Bold"
+                                       Foreground="{DynamicResource Accent.Text}"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource L_TagsSuffix}"
+                                       FontSize="11.5" Margin="5,0,0,0"
+                                       Foreground="{DynamicResource Accent.Text}"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- ══ FILTER PO BOJAMA ═══════════════════════════════════ -->
+            <ItemsControl Grid.Row="2" ItemsSource="{Binding ColourGroups}"
+                          Margin="28,0,28,14">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Command="{Binding DataContext.FilterByColourCommand,
+                                    RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding Key}"
+                                ToolTip="{Binding Label}"
+                                Height="30" Padding="10,0" Margin="0,0,7,7"
+                                Cursor="Hand" BorderThickness="1"
+                                Background="{DynamicResource Bg.Surface}"
+                                BorderBrush="{DynamicResource Border.Subtle}"
+                                Foreground="{DynamicResource Text.Secondary}"
+                                materialDesign:ButtonAssist.CornerRadius="15"
+                                Style="{StaticResource MaterialDesignOutlinedButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <Border Width="12" Height="12" CornerRadius="6"
+                                        Background="{Binding Swatch}"
+                                        VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Label}" FontSize="11.5"
+                                           Margin="7,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- ══ KARTICE OZNAKA ═════════════════════════════════════ -->
+            <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          Margin="28,0,28,0" Padding="0,0,8,0">
+                <ItemsControl ItemsSource="{Binding PagedTags}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <helpers:ResponsiveWrapPanel MinItemWidth="240" ItemSpacing="14"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Style="{StaticResource Card.Interactive}"
+                                    Padding="0" Margin="0,0,0,14">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Traka u boji oznake -->
+                                    <Border Grid.Row="0" Height="6" CornerRadius="16,16,0,0"
+                                            Background="{Binding DisplayColor,
+                                                Converter={StaticResource HexBrush}}"/>
+
+                                    <!-- Sadrzaj -->
+                                    <StackPanel Grid.Row="1" Margin="16,14,16,10">
+                                        <!-- Naziv u boji oznake, sa citljivim tekstom -->
+                                        <Border CornerRadius="8" Padding="10,5"
+                                                HorizontalAlignment="Left"
+                                                Background="{Binding DisplayColor,
+                                                    Converter={StaticResource HexBrush}}">
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontSize="13" FontWeight="Bold"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       MaxWidth="180"
+                                                       Foreground="{Binding DisplayColor,
+                                                           Converter={StaticResource HexContrast}}"/>
+                                        </Border>
+
+                                        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                            <materialDesign:PackIcon Kind="FileDocumentMultipleOutline"
+                                                                     Width="14" Height="14"
+                                                                     VerticalAlignment="Center"
+                                                                     Foreground="{DynamicResource Text.Tertiary}"/>
+                                            <TextBlock Text="{Binding DocumentCount}"
+                                                       Style="{StaticResource T.Caption}"
+                                                       FontWeight="SemiBold"
+                                                       Margin="6,0,4,0"/>
+                                            <TextBlock Text="{DynamicResource L_DocumentsLower}"
+                                                       Style="{StaticResource T.Caption}"/>
+                                        </StackPanel>
+
+                                        <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                            <materialDesign:PackIcon Kind="Tune"
+                                                                     Width="14" Height="14"
+                                                                     VerticalAlignment="Center"
+                                                                     Foreground="{DynamicResource Text.Tertiary}"/>
+                                            <TextBlock Text="{Binding MatchingAlgorithmName}"
+                                                       Style="{StaticResource T.Caption}"
+                                                       Margin="6,0,0,0"/>
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <!-- Akcije -->
+                                    <Border Grid.Row="2" BorderThickness="0,1,0,0"
+                                            BorderBrush="{DynamicResource Border.Subtle}"
+                                            Padding="8,6">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <Button Grid.Column="0"
+                                                    Command="{Binding DataContext.OpenEditFormCommand,
+                                                        RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    Style="{StaticResource Btn.Ghost}"
+                                                    Foreground="{DynamicResource Accent}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <materialDesign:PackIcon Kind="PencilOutline"
+                                                                             Width="14" Height="14"
+                                                                             VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{DynamicResource L_Edit}"
+                                                               Margin="5,0,0,0" FontSize="11.5"
+                                                               VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
+
+                                            <Button Grid.Column="1"
+                                                    Command="{Binding DataContext.DeleteCommand,
+                                                        RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    Style="{StaticResource Btn.Danger}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <materialDesign:PackIcon Kind="DeleteOutline"
+                                                                             Width="14" Height="14"
+                                                                             VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{DynamicResource L_Delete}"
+                                                               Margin="5,0,0,0" FontSize="11.5"
+                                                               VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
+
+                                            <Button Grid.Column="2"
+                                                    Command="{Binding DataContext.ShowDocumentsCommand,
+                                                        RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    Style="{StaticResource MaterialDesignIconButton}"
+                                                    Width="32" Height="32"
+                                                    ToolTip="{DynamicResource L_ShowTagged}"
+                                                    Foreground="{DynamicResource Accent}">
+                                                <materialDesign:PackIcon Kind="ArrowRight"
+                                                                         Width="16" Height="16"/>
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <!-- ══ PRAZNO STANJE ══════════════════════════════════════ -->
+            <StackPanel Grid.Row="3" VerticalAlignment="Center"
+                        HorizontalAlignment="Center"
+                        Visibility="{Binding IsEmpty, Converter={StaticResource BoolVis}}">
+                <Border Width="80" Height="80" CornerRadius="24"
+                        Background="{DynamicResource Accent.Subtle}"
+                        HorizontalAlignment="Center">
+                    <materialDesign:PackIcon Kind="TagOffOutline" Width="38" Height="38"
+                                             Foreground="{DynamicResource Accent}"
+                                             HorizontalAlignment="Center"
+                                             VerticalAlignment="Center"/>
+                </Border>
+                <TextBlock Text="{DynamicResource L_NoTags}"
+                           Style="{StaticResource T.Heading}"
+                           HorizontalAlignment="Center" Margin="0,16,0,4"/>
+                <TextBlock Text="{DynamicResource L_CreateFirstTag}"
+                           Style="{StaticResource T.Caption}"
+                           HorizontalAlignment="Center" TextAlignment="Center"
+                           MaxWidth="280" TextWrapping="Wrap"/>
+            </StackPanel>
+
+            <!-- ══ PAGINACIJA ═════════════════════════════════════════ -->
+            <Border Grid.Row="4" Style="{StaticResource Card.Surface}"
+                    Margin="28,14,28,20" Padding="14,10"
+                    Visibility="{Binding HasPages, Converter={StaticResource BoolVis}}">
+                <Grid>
+                    <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center"
+                               Style="{StaticResource T.Caption}"
+                               Text="{Binding RangeLabel}"/>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Command="{Binding PreviousPageCommand}"
+                                Style="{StaticResource MaterialDesignIconButton}"
+                                Width="34" Height="34"
+                                Foreground="{DynamicResource Accent}">
+                            <materialDesign:PackIcon Kind="ChevronLeft" Width="18" Height="18"/>
+                        </Button>
+
+                        <Border Background="{DynamicResource Accent.Subtle}"
+                                BorderBrush="{DynamicResource Accent.Border}" BorderThickness="1"
+                                CornerRadius="9" Padding="16,5" Margin="6,0"
+                                VerticalAlignment="Center">
+                            <TextBlock FontWeight="Bold" FontSize="12.5"
+                                       Foreground="{DynamicResource Accent.Text}">
+                                <TextBlock.Text>
+                                    <MultiBinding StringFormat="{}{0} / {1}">
+                                        <Binding Path="CurrentPage"/>
+                                        <Binding Path="TotalPages"/>
+                                    </MultiBinding>
+                                </TextBlock.Text>
+                            </TextBlock>
+                        </Border>
+
+                        <Button Command="{Binding NextPageCommand}"
+                                Style="{StaticResource MaterialDesignIconButton}"
+                                Width="34" Height="34"
+                                Foreground="{DynamicResource Accent}">
+                            <materialDesign:PackIcon Kind="ChevronRight" Width="18" Height="18"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- ══ BOCNA FORMA ════════════════════════════════════════════ -->
+        <Border Grid.Column="1" Width="360"
+                Background="{DynamicResource Bg.Surface}"
+                BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1,0,0,0"
+                Visibility="{Binding IsFormOpen, Converter={StaticResource BoolVis}}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Background="{DynamicResource Accent}" Padding="20,16">
+                    <DockPanel LastChildFill="False">
+                        <StackPanel DockPanel.Dock="Left">
+                            <TextBlock Text="{Binding FormTitle}" FontSize="16"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource Text.OnAccent}"/>
+                            <TextBlock Text="{DynamicResource L_EnterTagData}" FontSize="11.5"
+                                       Opacity="0.85" Margin="0,2,0,0"
+                                       Foreground="{DynamicResource Text.OnAccent}"/>
+                        </StackPanel>
+                        <Button DockPanel.Dock="Right" Command="{Binding CloseFormCommand}"
+                                Style="{StaticResource MaterialDesignIconButton}"
+                                Width="32" Height="32"
+                                Foreground="{DynamicResource Text.OnAccent}">
+                            <materialDesign:PackIcon Kind="Close" Width="16" Height="16"/>
+                        </Button>
+                    </DockPanel>
+                </Border>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="28,22,28,24">
+                        <TextBlock Text="{DynamicResource L_TagName}"
+                                   Style="{StaticResource T.Overline}" Margin="0,0,0,8"/>
+                        <TextBox Text="{Binding FormName, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource Input.Text}"
+                                 Height="48" VerticalContentAlignment="Center"
+                                 materialDesign:HintAssist.Hint="{DynamicResource L_TagExample}"/>
+
+                        <TextBlock Text="{DynamicResource L_ColourCaps}"
+                                   Style="{StaticResource T.Overline}" Margin="0,20,0,8"/>
+
+                        <!-- Pregled izabrane boje -->
+                        <Border Style="{StaticResource Box.Sunken}" Padding="12"
+                                Margin="0,0,0,12">
+                            <StackPanel Orientation="Horizontal">
+                                <Border Width="38" Height="38" CornerRadius="10"
+                                        Background="{Binding FormColor,
+                                            Converter={StaticResource HexBrush}}"/>
+                                <TextBox Text="{Binding FormColor, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource Input.Text}"
+                                         FontFamily="Consolas" Width="170" Margin="14,0,0,0"
+                                         Height="46" VerticalAlignment="Center"
+                                         VerticalContentAlignment="Center"
+                                         materialDesign:HintAssist.Hint="{DynamicResource L_HexShort}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Paleta: svaki uzorak u svojoj boji -->
+                        <TextBlock Text="{DynamicResource L_PickColour}"
+                                   Style="{StaticResource T.Overline}" Margin="0,0,0,8"/>
+                        <ItemsControl ItemsSource="{Binding PresetColors}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Command="{Binding DataContext.SetColorCommand,
+                                                RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"
+                                            ToolTip="{Binding}"
+                                            Width="40" Height="40" Padding="0"
+                                            Margin="0,0,8,8" BorderThickness="0"
+                                            Background="Transparent" Cursor="Hand"
+                                            Style="{StaticResource MaterialDesignFlatButton}">
+                                        <Border Width="32" Height="32" CornerRadius="9"
+                                                Background="{Binding Converter={StaticResource HexBrush}}"/>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Border Background="{DynamicResource Danger.Subtle}"
+                                CornerRadius="9" Padding="12,9" Margin="0,14,0,0"
+                                Visibility="{Binding HasFormError, Converter={StaticResource BoolVis}}">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="AlertCircleOutline"
+                                                         Width="16" Height="16"
+                                                         VerticalAlignment="Top"
+                                                         Foreground="{DynamicResource Danger}"/>
+                                <TextBlock Text="{Binding FormError}" FontSize="11.5"
+                                           Margin="8,0,0,0" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource Danger}"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <Border Grid.Row="2" BorderThickness="0,1,0,0"
+                        BorderBrush="{DynamicResource Border.Subtle}" Padding="20,14">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Command="{Binding CloseFormCommand}"
+                                Style="{StaticResource Btn.Secondary}" Margin="0,0,6,0">
+                            <TextBlock Text="{DynamicResource L_Cancel}"/>
+                        </Button>
+                        <Button Grid.Column="1" Command="{Binding SaveCommand}"
+                                Style="{StaticResource Btn.Primary}" Margin="6,0,0,0">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="ContentSave" Width="15" Height="15"
+                                                         Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="{DynamicResource L_SaveBtn}"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

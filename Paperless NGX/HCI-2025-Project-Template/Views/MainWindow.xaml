@@ -1,0 +1,1537 @@
+﻿<Window x:Class="HCI_2025_Project_Template.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:viewModels="clr-namespace:HCI_2025_Project_Template.ViewModels"
+        xmlns:views="clr-namespace:HCI_2025_Project_Template.Views"
+        xmlns:helpers="clr-namespace:HCI_2025_Project_Template.Helpers"
+        Title="Paperless NGX" Height="800" Width="1450"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource Bg.Sunken}">
+
+    <Window.DataContext>
+        <viewModels:MainViewModel/>
+    </Window.DataContext>
+
+    <!-- ══ TASTATURNE PREČICE ══════════════════════════════════
+         Ctrl+F  fokus na pretragu      (obrađeno u code-behind)
+         Ctrl+N  novi dokument
+         Ctrl+D  lista dokumenata
+         Ctrl+S  sačuvani dokumenti
+         Ctrl+T  oznake
+         F5      osvježi listu
+         Esc     zatvori padajuće liste
+    -->
+    <Window.InputBindings>
+        <KeyBinding Modifiers="Ctrl" Key="N" Command="{Binding GoToUploadCommand}"/>
+        <KeyBinding Modifiers="Ctrl" Key="D" Command="{Binding GoToDocumentsCommand}"/>
+        <KeyBinding Modifiers="Ctrl" Key="S" Command="{Binding GoToFavoritesCommand}"/>
+        <KeyBinding Modifiers="Ctrl" Key="T" Command="{Binding GoToTagsCommand}"/>
+        <KeyBinding Key="F5" Command="{Binding RefreshCommand}"/>
+        <KeyBinding Key="Escape" Command="{Binding CloseSearchPopupsCommand}"/>
+    </Window.InputBindings>
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolVis"/>
+        <helpers:EqualityToBoolConverter x:Key="IsActiveSection"/>
+        <helpers:ContextMenuContextConverter x:Key="CtxContext"/>
+        <helpers:TagNameToColourConverter x:Key="TagColour"/>
+        <helpers:TagNameToContrastConverter x:Key="TagContrast"/>
+
+        <!-- ── Sidebar dugme ── -->
+        <Style x:Key="MenuButton" TargetType="Button"
+               BasedOn="{StaticResource MaterialDesignFlatButton}">
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.OnShell}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="8"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource Bg.ShellHover}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource Text.OnAccent}"/>
+                </Trigger>
+
+                <!-- Aktivna stavka - mora doci POSLIJE hovera da bi ga nadjacala -->
+                <DataTrigger Value="True">
+                    <DataTrigger.Binding>
+                        <MultiBinding Converter="{StaticResource IsActiveSection}">
+                            <Binding Path="DataContext.ActiveSection"
+                                     RelativeSource="{RelativeSource AncestorType=Window}"/>
+                            <Binding Path="Tag" RelativeSource="{RelativeSource Self}"/>
+                        </MultiBinding>
+                    </DataTrigger.Binding>
+                    <Setter Property="Background" Value="{DynamicResource Accent}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource Text.OnAccent}"/>
+                    <Setter Property="FontWeight" Value="SemiBold"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- ── DocCard hover ── -->
+        <Style x:Key="DocCard" TargetType="materialDesign:Card">
+            <Setter Property="UniformCornerRadius" Value="14"/>
+            <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp2"/>
+            <Setter Property="Background" Value="{DynamicResource Bg.Surface}"/>
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <ScaleTransform ScaleX="1" ScaleY="1"/>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <!-- Sacuvani dokument se izdvaja zlatnom ivicom -->
+                <DataTrigger Binding="{Binding IsFavorite}" Value="True">
+                    <Setter Property="BorderBrush" Value="#F5A524"/>
+                    <Setter Property="BorderThickness" Value="2"/>
+                </DataTrigger>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp8"/>
+                    <Trigger.EnterActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation
+                                    Storyboard.TargetProperty="RenderTransform.ScaleX"
+                                    To="1.03" Duration="0:0:0.15"/>
+                                <DoubleAnimation
+                                    Storyboard.TargetProperty="RenderTransform.ScaleY"
+                                    To="1.03" Duration="0:0:0.15"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.EnterActions>
+                    <Trigger.ExitActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation
+                                    Storyboard.TargetProperty="RenderTransform.ScaleX"
+                                    To="1.0" Duration="0:0:0.15"/>
+                                <DoubleAnimation
+                                    Storyboard.TargetProperty="RenderTransform.ScaleY"
+                                    To="1.0" Duration="0:0:0.15"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.ExitActions>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- ── DetailLabel ── -->
+        <Style x:Key="DetailLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+            <Setter Property="Margin" Value="0,14,0,6"/>
+        </Style>
+
+        <!-- ════════════════════════════════════════════════
+             DATA TEMPLATES — ContentControl routing
+             ════════════════════════════════════════════════ -->
+
+        <!-- Dashboard -->
+        <DataTemplate DataType="{x:Type viewModels:DashboardViewModel}">
+            <views:DashboardView/>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type viewModels:DocumentDetailViewModel}">
+            <views:DocumentDetailView/>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type viewModels:TagsViewModel}">
+            <views:TagsView/>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type viewModels:SearchViewModel}">
+            <views:SearchView/>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type viewModels:UploadViewModel}">
+            <views:UploadView/>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type viewModels:SettingsViewModel}">
+            <views:SettingsView/>
+        </DataTemplate>
+
+        <!-- Dokumenti (MainViewModel kao DataContext) -->
+        <DataTemplate DataType="{x:Type viewModels:MainViewModel}">
+            <Grid Background="{DynamicResource Bg.Canvas}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Title + Upload dugme -->
+                <Grid Grid.Row="0" Margin="28,24,28,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- LEFT: TITLE -->
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="{DynamicResource L_AppSubtitle}"
+                   FontSize="13"
+                   Foreground="{DynamicResource Text.Secondary}"/>
+
+                        <TextBlock Text="{Binding ListTitle}"
+                   FontSize="26"
+                   FontWeight="ExtraBold"
+                   Foreground="{DynamicResource Text.Primary}"/>
+                    </StackPanel>
+
+                    <!-- RIGHT: ACTIONS -->
+                    <StackPanel Grid.Column="1"
+                Orientation="Horizontal"
+                VerticalAlignment="Center">
+
+                        <!-- Loading -->
+                        <ProgressBar IsIndeterminate="True"
+                     Width="100"
+                     Height="4"
+                     Margin="0,0,12,0"
+                     VerticalAlignment="Center"
+                     Foreground="{DynamicResource Accent}"
+                     Background="Transparent"
+                     Visibility="{Binding IsBusy, Converter={StaticResource BoolVis}}"/>
+
+                        <!-- Upload Button -->
+                        <Button Command="{Binding UploadCommand}"
+                Height="34"
+                Padding="16,0"
+                Background="{DynamicResource Accent}"
+                BorderBrush="{DynamicResource Accent}"
+                Foreground="{DynamicResource Text.OnAccent}"
+                Cursor="Hand"
+                VerticalAlignment="Center"
+                materialDesign:ButtonAssist.CornerRadius="8">
+
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+                                    <Setter Property="FontSize" Value="12"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                    <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp2"/>
+
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource Accent.Hover}"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource Accent.Hover}"/>
+                                            <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp6"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+
+                                <materialDesign:PackIcon Kind="CloudUploadOutline"
+                                         Width="15"
+                                         Height="15"
+                                         Margin="0,0,6,0"/>
+
+                                <TextBlock Text="{DynamicResource L_Add}"/>
+
+                            </StackPanel>
+                        </Button>
+
+                    </StackPanel>
+                </Grid>
+
+                <!-- Toolbar -->
+                <Border Grid.Row="1" Background="{DynamicResource Bg.Surface}" CornerRadius="12"
+                        Padding="12,8" Margin="28,0,28,16"
+                        BorderBrush="{DynamicResource Accent.Border}" BorderThickness="1">
+                    <DockPanel LastChildFill="False">
+                        <Button Command="{Binding ToggleViewCommand}" Height="34"
+                                materialDesign:ButtonAssist.CornerRadius="8"
+                                Foreground="{DynamicResource Accent}" BorderBrush="{DynamicResource Accent}">
+                            <Button.Style>
+                                <Style TargetType="Button"
+                                       BasedOn="{StaticResource MaterialDesignOutlinedButton}">
+                                    <Setter Property="Content" Value="{DynamicResource L_TableView}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsTableView}"
+                                                     Value="True">
+                                            <Setter Property="Content"
+                                                    Value="{DynamicResource L_CardView}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+
+                        <TextBlock DockPanel.Dock="Left" VerticalAlignment="Center"
+                                   Margin="16,0,0,0" FontSize="12"
+                                   Foreground="{DynamicResource Text.Secondary}">
+                            <Run Text="{Binding TotalDocuments, Mode=OneWay}"/>
+                            <Run Text="{DynamicResource L_DocsTotal}"/>
+                        </TextBlock>
+
+                        <StackPanel Orientation="Horizontal" DockPanel.Dock="Right"
+                                    VerticalAlignment="Center">
+                            <Button Command="{Binding PreviousPageCommand}"
+                                    Style="{StaticResource MaterialDesignIconButton}"
+                                    Width="32" Height="32">
+                                <materialDesign:PackIcon Kind="ChevronLeft"
+                                                         Foreground="{DynamicResource Accent}"/>
+                            </Button>
+                            <Border Background="{DynamicResource Accent.Subtle}" CornerRadius="8"
+                                    Padding="14,4" Margin="4,0">
+                                <TextBlock VerticalAlignment="Center"
+                                           FontWeight="Bold" FontSize="13"
+                                           Foreground="{DynamicResource Accent}">
+                                    <TextBlock.Text>
+                                        <MultiBinding StringFormat="{}{0} / {1}">
+                                            <Binding Path="CurrentPage"/>
+                                            <Binding Path="TotalPages"/>
+                                        </MultiBinding>
+                                    </TextBlock.Text>
+                                </TextBlock>
+                            </Border>
+                            <Button Command="{Binding NextPageCommand}"
+                                    Style="{StaticResource MaterialDesignIconButton}"
+                                    Width="32" Height="32">
+                                <materialDesign:PackIcon Kind="ChevronRight"
+                                                         Foreground="{DynamicResource Accent}"/>
+                            </Button>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+                <views:FilterBarView Grid.Row="2" DataContext="{Binding Filter}"
+                     Margin="28,0,28,0"/>
+                <!-- Document area -->
+                <Grid Grid.Row="3" Margin="28,0,28,20">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- CARD VIEW -->
+                    <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  Visibility="{Binding IsGridView,
+                                      Converter={StaticResource BoolVis}}">
+                        <ItemsControl ItemsSource="{Binding Documents}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <helpers:ResponsiveWrapPanel MinItemWidth="230"
+                                                                 ItemSpacing="16"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <materialDesign:Card Background="{DynamicResource Bg.Surface}" Style="{StaticResource DocCard}"
+                     Height="290"
+                     Cursor="Hand"
+                     BorderThickness="2">
+                                        <materialDesign:Card.Tag>
+                                            <MultiBinding Converter="{StaticResource CtxContext}">
+                                                <Binding Path="DataContext"
+                                                         RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                                <Binding Path="Id"/>
+                                            </MultiBinding>
+                                        </materialDesign:Card.Tag>
+                                        <materialDesign:Card.BorderBrush>
+                                            <SolidColorBrush Color="Transparent"/>
+                                        </materialDesign:Card.BorderBrush>
+
+                                        <materialDesign:Card.ContextMenu>
+                                            <ContextMenu
+                                                DataContext="{Binding PlacementTarget.Tag,
+                                                    RelativeSource={RelativeSource Self}}">
+                                                <MenuItem Header="{DynamicResource L_CtxOpen}"
+                                                          Command="{Binding Vm.OpenDetailWindowCommand}"
+                                                          CommandParameter="{Binding DocumentId}">
+                                                    <MenuItem.Icon>
+                                                        <materialDesign:PackIcon Kind="OpenInNew"/>
+                                                    </MenuItem.Icon>
+                                                </MenuItem>
+                                                <MenuItem Header="{DynamicResource L_CtxSave}"
+                                                          Command="{Binding Vm.ToggleFavoriteCommand}"
+                                                          CommandParameter="{Binding DocumentId}">
+                                                    <MenuItem.Icon>
+                                                        <materialDesign:PackIcon Kind="StarOutline"/>
+                                                    </MenuItem.Icon>
+                                                </MenuItem>
+                                                <Separator/>
+                                                <MenuItem Header="{DynamicResource L_CtxDownload}"
+                                                          Command="{Binding Vm.DownloadByIdCommand}"
+                                                          CommandParameter="{Binding DocumentId}">
+                                                    <MenuItem.Icon>
+                                                        <materialDesign:PackIcon Kind="Download"/>
+                                                    </MenuItem.Icon>
+                                                </MenuItem>
+                                            </ContextMenu>
+                                        </materialDesign:Card.ContextMenu>
+
+                                        <materialDesign:Card.InputBindings>
+                                            <MouseBinding Gesture="LeftClick"
+        Command="{Binding DataContext.SelectDocumentCommand,
+            RelativeSource={RelativeSource AncestorType=Window}}"
+        CommandParameter="{Binding Id}"/>
+                                            <MouseBinding Gesture="LeftDoubleClick"
+        Command="{Binding DataContext.OpenDetailWindowCommand,
+            RelativeSource={RelativeSource AncestorType=Window}}"
+        CommandParameter="{Binding Id}"/>
+                                        </materialDesign:Card.InputBindings>
+                                        <Grid>
+                                            <StackPanel>
+                                                <!-- Thumbnail -->
+                                                <Grid Height="130">
+                                                    <Border CornerRadius="14,14,0,0">
+                                                        <Border.Background>
+                                                            <LinearGradientBrush
+                                                                StartPoint="0,0"
+                                                                EndPoint="1,1">
+                                                                <GradientStop Color="#E8F8F5"
+                                                                              Offset="0"/>
+                                                                <GradientStop Color="#CCFBF1"
+                                                                              Offset="1"/>
+                                                            </LinearGradientBrush>
+                                                        </Border.Background>
+                                                    </Border>
+                                                    <materialDesign:PackIcon
+                                                        Kind="FileDocumentOutline"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        Width="48" Height="48"
+                                                        Foreground="{DynamicResource Accent}" Opacity="0.18"/>
+                                                    <Image Source="{Binding Thumbnail}"
+                                                           Stretch="UniformToFill"
+                                                           RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                    <Border HorizontalAlignment="Right"
+                                                            VerticalAlignment="Top"
+                                                            Margin="0,8,8,0"
+                                                            Background="{DynamicResource Accent}"
+                                                            CornerRadius="6" Padding="6,2">
+                                                        <TextBlock
+                                                            Text="{Binding DocumentTypeName}"
+                                                            FontSize="9" FontWeight="Bold"
+                                                            Foreground="{DynamicResource Text.OnAccent}"/>
+                                                    </Border>
+
+                                                    <!-- Zvjezdica: sacuvaj / ukloni -->
+                                                    <Button HorizontalAlignment="Left"
+                                                            VerticalAlignment="Top"
+                                                            Margin="6,6,0,0"
+                                                            Width="30" Height="30" Padding="0"
+                                                            Cursor="Hand"
+                                                            Command="{Binding DataContext.ToggleFavoriteCommand,
+                                                                RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding Id}"
+                                                            ToolTip="{DynamicResource L_SaveToggle}"
+                                                            Style="{StaticResource MaterialDesignIconButton}">
+                                                        <materialDesign:PackIcon Width="19" Height="19">
+                                                            <materialDesign:PackIcon.Style>
+                                                                <Style TargetType="materialDesign:PackIcon">
+                                                                    <Setter Property="Kind" Value="StarOutline"/>
+                                                                    <Setter Property="Foreground" Value="{DynamicResource Text.Tertiary}"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsFavorite}" Value="True">
+                                                                            <Setter Property="Kind" Value="Star"/>
+                                                                            <Setter Property="Foreground" Value="#F5A524"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </materialDesign:PackIcon.Style>
+                                                        </materialDesign:PackIcon>
+                                                    </Button>
+                                                </Grid>
+
+                                                <!-- Accent line -->
+                                                <Border Height="3">
+                                                    <Border.Background>
+                                                        <LinearGradientBrush
+                                                            StartPoint="0,0" EndPoint="1,0">
+                                                            <GradientStop Color="{DynamicResource Color.Accent}"
+                                                                          Offset="0"/>
+                                                            <GradientStop Color="{DynamicResource Color.AccentLight}"
+                                                                          Offset="1"/>
+                                                        </LinearGradientBrush>
+                                                    </Border.Background>
+                                                </Border>
+
+                                                <!-- Card body -->
+                                                <StackPanel Margin="12,10,12,8">
+                                                    <TextBlock Text="{Binding Title}"
+                                                               FontWeight="Bold" FontSize="12"
+                                                               MaxHeight="36"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               TextWrapping="Wrap"
+                                                               Foreground="{DynamicResource Text.Primary}"/>
+                                                    <StackPanel Orientation="Horizontal"
+                                                                Margin="0,5,0,0">
+                                                        <materialDesign:PackIcon
+                                                            Kind="CalendarOutline"
+                                                            Width="12" Height="12"
+                                                            Foreground="{DynamicResource Text.Secondary}"
+                                                            VerticalAlignment="Center"/>
+                                                        <TextBlock
+                                                            Text="{Binding CreatedFormatted}"
+                                                            FontSize="10"
+                                                            Foreground="{DynamicResource Text.Secondary}"
+                                                            Margin="4,0,0,0"/>
+                                                    </StackPanel>
+                                                    <StackPanel Orientation="Horizontal"
+                                                                Margin="0,3,0,0">
+                                                        <materialDesign:PackIcon
+                                                            Kind="AccountOutline"
+                                                            Width="12" Height="12"
+                                                            Foreground="{DynamicResource Text.Secondary}"
+                                                            VerticalAlignment="Center"/>
+                                                        <TextBlock FontSize="10"
+                                                                   Margin="4,0,0,0"
+                                                                   Foreground="{DynamicResource Text.Secondary}"
+                                                                   TextTrimming="CharacterEllipsis">
+                                                            <TextBlock.Text>
+                                                                <Binding Path="CorrespondentName"
+                                                                         TargetNullValue="—"
+                                                                         FallbackValue="—"/>
+                                                            </TextBlock.Text>
+                                                        </TextBlock>
+                                                    </StackPanel>
+                                                    <ItemsControl
+                                                        ItemsSource="{Binding TagNames}"
+                                                        Margin="0,6,0,0">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <WrapPanel/>
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Border CornerRadius="5"
+                                                                        Margin="0,0,4,3"
+                                                                        Padding="6,2"
+                                                                        Background="{Binding Converter={StaticResource TagColour}}">
+                                                                    <TextBlock Text="{Binding}"
+                                                                               FontSize="9"
+                                                                               Foreground="{Binding Converter={StaticResource TagContrast}}"
+                                                                               FontWeight="SemiBold"/>
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </StackPanel>
+                                            </StackPanel>
+
+                                            <!-- Diskretno dugme na hover, bez zatamnjenja sadrzaja -->
+                                            <Border Background="Transparent"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Bottom"
+                                                    Margin="0,0,0,12">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Opacity" Value="0"/>
+                                                        <Setter Property="IsHitTestVisible" Value="False"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger
+                                                                Binding="{Binding IsMouseOver,
+                                                                    RelativeSource={RelativeSource
+                                                                        AncestorType=materialDesign:Card}}"
+                                                                Value="True">
+                                                                <Setter Property="IsHitTestVisible" Value="True"/>
+                                                                <DataTrigger.EnterActions>
+                                                                    <BeginStoryboard>
+                                                                        <Storyboard>
+                                                                            <DoubleAnimation
+                                                                                Storyboard.TargetProperty="Opacity"
+                                                                                To="1" Duration="0:0:0.15"/>
+                                                                        </Storyboard>
+                                                                    </BeginStoryboard>
+                                                                </DataTrigger.EnterActions>
+                                                                <DataTrigger.ExitActions>
+                                                                    <BeginStoryboard>
+                                                                        <Storyboard>
+                                                                            <DoubleAnimation
+                                                                                Storyboard.TargetProperty="Opacity"
+                                                                                To="0" Duration="0:0:0.15"/>
+                                                                        </Storyboard>
+                                                                    </BeginStoryboard>
+                                                                </DataTrigger.ExitActions>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <Button Command="{Binding DataContext.OpenDetailWindowCommand,
+                                                            RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding Id}"
+                                                        Height="32" Padding="14,0"
+                                                        Background="{DynamicResource Accent}"
+                                                        BorderBrush="{DynamicResource Accent}"
+                                                        Foreground="{DynamicResource Text.OnAccent}"
+                                                        ToolTip="{DynamicResource L_OpenFullView}"
+                                                        materialDesign:ButtonAssist.CornerRadius="8"
+                                                        Style="{StaticResource MaterialDesignRaisedButton}"
+                                                        Cursor="Hand">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <materialDesign:PackIcon
+                                                            Kind="OpenInNew" Width="14" Height="14"
+                                                            Margin="0,0,6,0"/>
+                                                        <TextBlock Text="{DynamicResource L_Open}"
+                                                                   FontSize="10" FontWeight="Bold"/>
+                                                    </StackPanel>
+                                                </Button>
+                                            </Border>
+                                        </Grid>
+                                    </materialDesign:Card>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <!-- Paginacija ispod kartica -->
+                    <Border Grid.Row="1" Style="{StaticResource Card.Surface}"
+                            Margin="0,12,0,0" Padding="14,10"
+                            Visibility="{Binding IsGridView, Converter={StaticResource BoolVis}}">
+                        <Grid>
+                            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center"
+                                       Style="{StaticResource T.Caption}"
+                                       Text="{Binding RangeLabel}"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button Command="{Binding PreviousPageCommand}"
+                                        Style="{StaticResource MaterialDesignIconButton}"
+                                        Width="34" Height="34"
+                                        Foreground="{DynamicResource Accent}">
+                                    <materialDesign:PackIcon Kind="ChevronLeft"
+                                                             Width="18" Height="18"/>
+                                </Button>
+                                <!-- Brojevi stranica -->
+                                <ItemsControl ItemsSource="{Binding PageNumbers}"
+                                              VerticalAlignment="Center" Margin="4,0">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Command="{Binding DataContext.GoToPageCommand,
+                                                        RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding Number}"
+                                                    IsEnabled="{Binding IsClickable}"
+                                                    Content="{Binding Label}"
+                                                    Width="34" Height="34" Margin="2,0"
+                                                    FontSize="12.5" FontWeight="SemiBold"
+                                                    Cursor="Hand" BorderThickness="1"
+                                                    materialDesign:ButtonAssist.CornerRadius="9">
+                                                <Button.Style>
+                                                    <Style TargetType="Button"
+                                                           BasedOn="{StaticResource MaterialDesignOutlinedButton}">
+                                                        <Setter Property="Background" Value="Transparent"/>
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource Border.Subtle}"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
+                                                        <Setter Property="Padding" Value="0"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                                <Setter Property="Background" Value="{DynamicResource Accent}"/>
+                                                                <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                                                                <Setter Property="Foreground" Value="{DynamicResource Text.OnAccent}"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsClickable}" Value="False">
+                                                                <Setter Property="BorderBrush" Value="Transparent"/>
+                                                                <Setter Property="Foreground" Value="{DynamicResource Text.Tertiary}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Button.Style>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <Button Command="{Binding NextPageCommand}"
+                                        Style="{StaticResource MaterialDesignIconButton}"
+                                        Width="34" Height="34"
+                                        Foreground="{DynamicResource Accent}">
+                                    <materialDesign:PackIcon Kind="ChevronRight"
+                                                             Width="18" Height="18"/>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- TABLE VIEW -->
+                    <materialDesign:Card Grid.Row="0" Background="{DynamicResource Bg.Surface}" UniformCornerRadius="14"
+                                         materialDesign:ElevationAssist.Elevation="Dp2"
+                                         Visibility="{Binding IsTableView,
+                                             Converter={StaticResource BoolVis}}">
+                        <DataGrid ItemsSource="{Binding Documents}"
+                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                  ScrollViewer.CanContentScroll="False"
+                                  AutoGenerateColumns="False" IsReadOnly="True"
+                                  Background="{DynamicResource Bg.Surface}" BorderThickness="0"
+                                  SelectionMode="Single" CanUserAddRows="False"
+                                  GridLinesVisibility="Horizontal"
+                                  HorizontalGridLinesBrush="#F0FDF4"
+                                  materialDesign:DataGridAssist.CellPadding="12,9"
+                                  materialDesign:DataGridAssist.ColumnHeaderPadding="12,11"
+                                  RowBackground="{DynamicResource Bg.Surface}"
+                                  AlternatingRowBackground="{DynamicResource Accent.Subtle}">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="ID"
+                                                    Binding="{Binding Id}" Width="55"/>
+                                <DataGridTemplateColumn Header="" Width="42">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border Width="32" Height="32" CornerRadius="6"
+                                                    ClipToBounds="True">
+                                                <Grid>
+                                                    <Border Background="{DynamicResource Accent.Subtle}"/>
+                                                    <materialDesign:PackIcon
+                                                        Kind="FileDocumentOutline"
+                                                        Foreground="{DynamicResource Accent}" Opacity="0.4"
+                                                        Width="18" Height="18"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"/>
+                                                    <Image Source="{Binding Thumbnail}"
+                                                           Stretch="UniformToFill"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="{DynamicResource L_Name}" Width="*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Title}"
+                                                       VerticalAlignment="Center"
+                                                       FontWeight="Medium" FontSize="13"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="{DynamicResource L_Date}"
+                                                    Binding="{Binding CreatedFormatted}"
+                                                    Width="110"/>
+                                <DataGridTemplateColumn Header="{DynamicResource L_DocTypeCol}" Width="110">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border Background="{DynamicResource Accent.Subtle}"
+                                                    BorderBrush="{DynamicResource Accent.Border}"
+                                                    BorderThickness="1" CornerRadius="5"
+                                                    Padding="7,2" HorizontalAlignment="Left">
+                                                <TextBlock Text="{Binding DocumentTypeName}"
+                                                           FontSize="11" Foreground="{DynamicResource Accent.Text}"
+                                                           FontWeight="SemiBold"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Korespodent" Width="130">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock FontSize="12"
+                                                       Foreground="{DynamicResource Text.Secondary}"
+                                                       VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis">
+                                                <TextBlock.Text>
+                                                    <Binding Path="CorrespondentName"
+                                                             TargetNullValue="—"
+                                                             FallbackValue="—"/>
+                                                </TextBlock.Text>
+                                            </TextBlock>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="{DynamicResource L_ActionsCol}" Width="180">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Button Content="{DynamicResource L_Preview}"
+                                                        Command="{Binding DataContext.SelectDocumentCommand,
+                                                            RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding Id}"
+                                                        Style="{StaticResource MaterialDesignFlatButton}"
+                                                        Foreground="{DynamicResource Accent}" Height="28"
+                                                        FontSize="11"
+                                                        materialDesign:ButtonAssist.CornerRadius="7"
+                                                        Margin="0,0,4,0"/>
+                                                <Button Content="{DynamicResource L_Open}"
+                                                        Command="{Binding DataContext.OpenDetailWindowCommand,
+                                                            RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding Id}"
+                                                        Style="{StaticResource MaterialDesignFlatButton}"
+                                                        Foreground="{DynamicResource Info}" Height="28"
+                                                        FontSize="11"
+                                                        materialDesign:ButtonAssist.CornerRadius="7"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </materialDesign:Card>
+                </Grid>
+            </Grid>
+        </DataTemplate>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="70"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- ══ HEADER ══════════════════════════════════════════ -->
+        <Border Grid.Row="0" Background="{DynamicResource Bg.Shell}" Padding="20,0" ClipToBounds="False">
+            <DockPanel LastChildFill="False">
+                <Grid VerticalAlignment="Center" Width="420" ClipToBounds="False">
+                    <materialDesign:Card x:Name="SearchCard" Height="40" Background="{DynamicResource Bg.ShellHover}"
+                         BorderThickness="0" UniformCornerRadius="10">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <materialDesign:PackIcon Kind="Magnify" Margin="12,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Foreground="{DynamicResource Text.Tertiary}" Width="18" Height="18"/>
+                            <TextBox Grid.Column="1" x:Name="SearchBox"
+                     GotKeyboardFocus="SearchBox_GotFocus"
+                     LostKeyboardFocus="SearchBox_LostFocus"
+                     Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
+                     Background="Transparent" BorderThickness="0"
+                     Foreground="{DynamicResource Text.OnShell}" Margin="10,0,8,0"
+                     VerticalAlignment="Center" FontSize="13"
+                     materialDesign:HintAssist.Hint="{DynamicResource L_SearchPlaceholder}"
+                     materialDesign:HintAssist.Foreground="{DynamicResource Text.OnShellDim}">
+                                <TextBox.InputBindings>
+                                    <KeyBinding Key="Return"
+                                Command="{Binding GoToSearchCommand}"
+                                CommandParameter="{Binding SearchQuery}"/>
+                                    <KeyBinding Key="Escape"
+                                Command="{Binding CloseSearchPopupsCommand}"/>
+                                </TextBox.InputBindings>
+                            </TextBox>
+                            <Button Grid.Column="2"
+                    Command="{Binding GoToSearchCommand}"
+                    CommandParameter="{Binding SearchQuery}"
+                    Style="{StaticResource MaterialDesignIconButton}"
+                    Width="32" Height="32" Margin="0,0,4,0">
+                                <materialDesign:PackIcon Kind="ArrowRight" Foreground="{DynamicResource Accent}"/>
+                            </Button>
+                        </Grid>
+                    </materialDesign:Card>
+
+                    <!-- Istorija pretrage - Popup da ga zaglavlje ne odsijeca -->
+                    <Popup IsOpen="{Binding ShowRecentSearches}"
+                           PlacementTarget="{Binding ElementName=SearchCard}"
+                           Placement="Bottom" VerticalOffset="8"
+                           AllowsTransparency="True" StaysOpen="True"
+                           PopupAnimation="Fade"
+                           Width="{Binding ActualWidth, ElementName=SearchCard}">
+                        <Border Background="{DynamicResource Bg.Surface}"
+                            CornerRadius="12"
+                            BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1"
+                            HorizontalAlignment="Stretch">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="22" Opacity="0.14"
+                                              ShadowDepth="6" Direction="270"/>
+                            </Border.Effect>
+                            <StackPanel>
+                                <Border Padding="14,9" BorderThickness="0,0,0,1"
+                                    BorderBrush="{DynamicResource Border.Subtle}">
+                                    <DockPanel LastChildFill="False">
+                                        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                                            <materialDesign:PackIcon Kind="History"
+                                                                 Width="13" Height="13"
+                                                                 VerticalAlignment="Center"
+                                                                 Foreground="{DynamicResource Text.Tertiary}"/>
+                                            <TextBlock Text="{DynamicResource L_RecentSearches}"
+                                                   FontSize="9" FontWeight="Bold"
+                                                   Margin="7,0,0,0" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource Text.Tertiary}"/>
+                                        </StackPanel>
+                                        <Button DockPanel.Dock="Right"
+                                            Command="{Binding ClearSearchHistoryCommand}"
+                                            Style="{StaticResource MaterialDesignFlatButton}"
+                                            Height="24" Padding="8,0" MinWidth="0"
+                                            FontSize="10"
+                                            Foreground="{DynamicResource Accent}">
+                                            <TextBlock Text="{DynamicResource L_ClearHistory}"/>
+                                        </Button>
+                                    </DockPanel>
+                                </Border>
+
+                                <ItemsControl ItemsSource="{Binding RecentSearches}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <Button Grid.Column="0"
+                                                    Command="{Binding DataContext.UseRecentSearchCommand,
+                                                        RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding}"
+                                                    HorizontalContentAlignment="Left"
+                                                    Height="40" Padding="14,0"
+                                                    Foreground="{DynamicResource Text.Primary}">
+                                                    <Button.Style>
+                                                        <Style TargetType="Button"
+                                                           BasedOn="{StaticResource MaterialDesignFlatButton}">
+                                                            <Style.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter Property="Background"
+                                                                        Value="{DynamicResource Accent.Subtle}"/>
+                                                                </Trigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Button.Style>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Border Width="26" Height="26" CornerRadius="8"
+                                                            Background="{DynamicResource Bg.Sunken}"
+                                                            Margin="0,0,10,0">
+                                                            <materialDesign:PackIcon Kind="ClockOutline"
+                                                                                 Width="13" Height="13"
+                                                                                 HorizontalAlignment="Center"
+                                                                                 VerticalAlignment="Center"
+                                                                                 Foreground="{DynamicResource Text.Tertiary}"/>
+                                                        </Border>
+                                                        <TextBlock Text="{Binding}" FontSize="13"
+                                                               VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    </StackPanel>
+                                                </Button>
+
+                                                <Button Grid.Column="1"
+                                                    Command="{Binding DataContext.RemoveRecentSearchCommand,
+                                                        RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding}"
+                                                    Style="{StaticResource MaterialDesignIconButton}"
+                                                    Width="30" Height="30" Margin="0,0,8,0"
+                                                    Foreground="{DynamicResource Text.Tertiary}">
+                                                    <materialDesign:PackIcon Kind="Close"
+                                                                         Width="12" Height="12"/>
+                                                </Button>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </Popup>
+
+                    <!-- Prijedlozi pretrage -->
+                    <Popup IsOpen="{Binding ShowAutocompleteSuggestions}"
+                           PlacementTarget="{Binding ElementName=SearchCard}"
+                           Placement="Bottom" VerticalOffset="8"
+                           AllowsTransparency="True" StaysOpen="True"
+                           PopupAnimation="Fade"
+                           Width="{Binding ActualWidth, ElementName=SearchCard}">
+                        <Border Background="{DynamicResource Bg.Surface}" CornerRadius="12"
+        BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1"
+        HorizontalAlignment="Stretch">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="20" Opacity="0.12"
+                          ShadowDepth="6" Direction="270"/>
+                            </Border.Effect>
+                            <StackPanel>
+                                <!-- Header dropdowna -->
+                                <Border Padding="14,8,14,8" BorderBrush="{DynamicResource Border.Subtle}"
+                BorderThickness="0,0,0,1">
+                                    <TextBlock Text="{DynamicResource L_Suggestions}" FontSize="9" FontWeight="Bold"
+                       Foreground="{DynamicResource Text.Tertiary}"/>
+                                </Border>
+                                <ItemsControl ItemsSource="{Binding AutocompleteSuggestions}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Command="{Binding DataContext.UseAutocompleteCommand,
+                                    RelativeSource={RelativeSource AncestorType=Window}}"
+                                    CommandParameter="{Binding}"
+                                    
+                                    HorizontalContentAlignment="Left"
+                                    Height="42" Padding="14,0"
+                                    Foreground="{DynamicResource Text.Primary}">
+                                                <Button.Style>
+                                                    <Style TargetType="Button"
+                                   BasedOn="{StaticResource MaterialDesignFlatButton}">
+                                                        <Style.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter Property="Background" Value="{DynamicResource Accent.Subtle}"/>
+                                                            </Trigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Button.Style>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Border Width="28" Height="28" CornerRadius="8"
+                                    Background="{DynamicResource Accent.Subtle}" Margin="0,0,10,0">
+                                                        <materialDesign:PackIcon Kind="Magnify"
+                                                         Width="14" Height="14"
+                                                         Foreground="{DynamicResource Accent}"
+                                                         HorizontalAlignment="Center"
+                                                         VerticalAlignment="Center"/>
+                                                    </Border>
+                                                    <TextBlock Text="{Binding}" FontSize="13"
+                                       Foreground="{DynamicResource Text.Primary}"
+                                       VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <!-- Footer sa hint-om -->
+                                <Border Padding="14,7,14,7" BorderBrush="{DynamicResource Border.Subtle}"
+                BorderThickness="0,1,0,0">
+                                    <TextBlock FontSize="10" Foreground="{DynamicResource Text.Tertiary}">
+                <Run Text="{DynamicResource L_Press}"/>
+                <Run Text="Enter" FontWeight="Bold" Foreground="{DynamicResource Accent}"/>
+                <Run Text="{DynamicResource L_ToSearch}"/>
+                                    </TextBlock>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                    </Popup>
+                </Grid>
+
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                    <Button x:Name="MicButton" Click="ToggleVoice_Click"
+                            Style="{StaticResource MaterialDesignFlatButton}"
+                            Margin="0,0,6,0" Height="32" MinWidth="0" Padding="9,0"
+                            Cursor="Hand"
+                            ToolTip="{DynamicResource L_VoiceHint}"
+                            materialDesign:ButtonAssist.CornerRadius="8">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon x:Name="MicIcon" Kind="MicrophoneOutline"
+                                                     Width="17" Height="17"
+                                                     VerticalAlignment="Center"
+                                                     Foreground="{DynamicResource Text.OnShell}"/>
+                            <Border x:Name="MicDot" Width="7" Height="7" CornerRadius="4"
+                                    Margin="6,0,0,0" Background="#EF4444"
+                                    VerticalAlignment="Center" Visibility="Collapsed"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Style="{StaticResource MaterialDesignFlatButton}"
+                            Click="ToggleLanguage_Click"
+                            Margin="0,0,10,0" Height="32" MinWidth="0" Padding="10,0"
+                            Foreground="{DynamicResource Text.OnShell}" Cursor="Hand"
+                            ToolTip="{DynamicResource L_UiLanguage}"
+                            materialDesign:ButtonAssist.CornerRadius="8">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Translate"
+                                                     Width="16" Height="16"
+                                                     VerticalAlignment="Center"/>
+                            <TextBlock x:Name="LangLabel" Text="SR"
+                                       Margin="6,0,0,0" FontSize="11"
+                                       FontWeight="Bold"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="ProfileButton" Click="ProfileButton_Click"
+                            Style="{StaticResource MaterialDesignFlatButton}"
+                            Height="40" MinWidth="0" Padding="6,0" Cursor="Hand"
+                            materialDesign:ButtonAssist.CornerRadius="10"
+                            Foreground="{DynamicResource Text.OnShell}">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Border Width="32" Height="32" CornerRadius="16"
+                                    Background="{DynamicResource Accent}">
+                                <materialDesign:PackIcon Kind="Account"
+                                                         Foreground="{DynamicResource Text.OnAccent}"
+                                                         Width="18" Height="18"
+                                                         HorizontalAlignment="Center"
+                                                         VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="student_test"
+                                       Foreground="{DynamicResource Text.OnShell}"
+                                       Margin="9,0,6,0" VerticalAlignment="Center"
+                                       FontWeight="Medium" FontSize="13"/>
+                            <materialDesign:PackIcon Kind="ChevronDown" Width="15" Height="15"
+                                                     VerticalAlignment="Center"
+                                                     Foreground="{DynamicResource Text.OnShellDim}"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Meni profila -->
+                    <Popup x:Name="ProfilePopup"
+                           PlacementTarget="{Binding ElementName=ProfileButton}"
+                           Placement="Bottom" HorizontalOffset="-90" VerticalOffset="4"
+                           AllowsTransparency="True" StaysOpen="False" PopupAnimation="Fade">
+                        <Border Background="{DynamicResource Bg.Surface}" CornerRadius="12"
+                                BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1"
+                                MinWidth="230" Padding="0,6">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="22" Opacity="0.16"
+                                                  ShadowDepth="6" Direction="270"/>
+                            </Border.Effect>
+                            <StackPanel>
+                                <Border Padding="16,10,16,12" BorderThickness="0,0,0,1"
+                                        BorderBrush="{DynamicResource Border.Subtle}"
+                                        Margin="0,0,0,6">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Width="38" Height="38" CornerRadius="19"
+                                                Background="{DynamicResource Accent}">
+                                            <materialDesign:PackIcon Kind="Account"
+                                                                     Foreground="{DynamicResource Text.OnAccent}"
+                                                                     Width="20" Height="20"
+                                                                     HorizontalAlignment="Center"
+                                                                     VerticalAlignment="Center"/>
+                                        </Border>
+                                        <StackPanel Margin="11,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock Text="student_test"
+                                                       Style="{StaticResource T.Title}"/>
+                                            <TextBlock Text="{DynamicResource L_LoggedIn}"
+                                                       Style="{StaticResource T.Caption}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <Button Click="ProfileSettings_Click"
+                                        Style="{StaticResource Btn.Ghost}"
+                                        HorizontalContentAlignment="Left"
+                                        HorizontalAlignment="Stretch" Height="40" Padding="16,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="CogOutline"
+                                                                 Width="16" Height="16"
+                                                                 VerticalAlignment="Center"/>
+                                        <TextBlock Text="{DynamicResource L_Settings}"
+                                                   Margin="12,0,0,0" FontSize="13"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+
+                                <Button Click="ProfileTheme_Click"
+                                        Style="{StaticResource Btn.Ghost}"
+                                        HorizontalContentAlignment="Left"
+                                        HorizontalAlignment="Stretch" Height="40" Padding="16,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="ThemeLightDark"
+                                                                 Width="16" Height="16"
+                                                                 VerticalAlignment="Center"/>
+                                        <TextBlock Text="{DynamicResource L_ToggleTheme}"
+                                                   Margin="12,0,0,0" FontSize="13"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+
+                                <Border Height="1" Margin="10,6"
+                                        Background="{DynamicResource Border.Subtle}"/>
+
+                                <Button Click="ProfileLogout_Click"
+                                        Style="{StaticResource Btn.Danger}"
+                                        HorizontalContentAlignment="Left"
+                                        HorizontalAlignment="Stretch" Height="40" Padding="16,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="LogoutVariant"
+                                                                 Width="16" Height="16"
+                                                                 VerticalAlignment="Center"/>
+                                        <TextBlock Text="{DynamicResource L_Logout}"
+                                                   Margin="12,0,0,0" FontSize="13"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+                    </Popup>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- ══ MAIN ════════════════════════════════════════════ -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="260"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="360"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ── SIDEBAR ── -->
+            <Border Grid.Column="0" Background="{DynamicResource Bg.Shell}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="15">
+                        <StackPanel Orientation="Horizontal" Margin="10,20,10,30">
+                            <Border Width="40" Height="40" CornerRadius="10"
+                                    Background="{DynamicResource Accent}">
+                                <materialDesign:PackIcon Kind="Leaf" Foreground="{DynamicResource Text.OnAccent}"
+                                                         Width="22" Height="22"
+                                                         HorizontalAlignment="Center"
+                                                         VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="Paperless" Foreground="{DynamicResource Text.OnShell}"
+                                       FontSize="18" FontWeight="Bold"
+                                       Margin="10,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <TextBlock Text="{DynamicResource L_Main}" Foreground="{DynamicResource Text.Tertiary}"
+                                   FontSize="10" FontWeight="Bold"
+                                   Margin="10,10,10,5"/>
+                        <Button Style="{StaticResource MenuButton}" Tag="dashboard"
+                                Command="{Binding GoToDashboardCommand}">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="ViewDashboard"/>
+                                <TextBlock Text="{DynamicResource L_Dashboard}" Margin="10,0"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource MenuButton}" Tag="documents"
+        Command="{Binding GoToDocumentsCommand}">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="FileDocument"/>
+                                <TextBlock Text="{DynamicResource L_Documents}" Margin="10,0"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource MenuButton}" Tag="favorites"
+        Command="{Binding GoToFavoritesCommand}">
+                            <DockPanel LastChildFill="False" Width="168">
+                                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                                    <materialDesign:PackIcon Kind="Star"/>
+                                    <TextBlock Text="{DynamicResource L_Saved}" Margin="10,0"/>
+                                </StackPanel>
+                                <Border DockPanel.Dock="Right" CornerRadius="9"
+                                        Background="#F5A524" Padding="7,1"
+                                        Margin="0,0,4,0" MinWidth="22"
+                                        VerticalAlignment="Center"
+                                        Visibility="{Binding HasFavorites,
+                                            Converter={StaticResource BoolVis}}">
+                                    <TextBlock Text="{Binding FavoritesCount}"
+                                               FontSize="10" FontWeight="Bold"
+                                               HorizontalAlignment="Center"
+                                               Foreground="#3A2A00"/>
+                                </Border>
+                            </DockPanel>
+                        </Button>
+
+                        <Button Style="{StaticResource MenuButton}" Tag="upload"
+        Command="{Binding GoToUploadCommand}">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="CloudUpload"/>
+                                <TextBlock Text="{DynamicResource L_AddDocument}" Margin="10,0"/>
+                            </StackPanel>
+                        </Button>
+
+                        <TextBlock Text="{DynamicResource L_Manage}" Foreground="{DynamicResource Text.Tertiary}"
+                                   FontSize="10" FontWeight="Bold"
+                                   Margin="10,20,10,5"/>
+                        <Button Style="{StaticResource MenuButton}" Tag="tags"
+        Command="{Binding GoToTagsCommand}">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="Tag"/>
+                                <TextBlock Text="{DynamicResource L_Tags}" Margin="10,0"/>
+                            </StackPanel>
+                        </Button>
+
+                        <TextBlock Text="{DynamicResource L_Administration}" Foreground="{DynamicResource Text.Tertiary}"
+                                   FontSize="10" FontWeight="Bold"
+                                   Margin="10,20,10,5"/>
+                        <Button Style="{StaticResource MenuButton}" Tag="settings"
+        Command="{Binding GoToSettingsCommand}">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="Cog"/>
+                                <TextBlock Text="{DynamicResource L_Settings}" Margin="10,0"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <!-- ── CONTENT (ContentControl) ── -->
+            <ContentControl Grid.Column="1" Content="{Binding CurrentView}">
+                <ContentControl.Style>
+                    <Style TargetType="ContentControl">
+                        <Setter Property="Grid.ColumnSpan" Value="1"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ShowSidePanel}" Value="False">
+                                <Setter Property="Grid.ColumnSpan" Value="2"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ContentControl.Style>
+            </ContentControl>
+            <!-- ── RIGHT PANEL ── -->
+            <Border Grid.Column="2" Background="{DynamicResource Bg.Sunken}"
+                    BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1,0,0,0">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ShowSidePanel}" Value="True">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <!-- Empty state -->
+                    <StackPanel VerticalAlignment="Center"
+                                HorizontalAlignment="Center" Margin="20">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedDocument}"
+                                                 Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <Border Width="80" Height="80" CornerRadius="24"
+                                Background="{DynamicResource Accent.Subtle}" HorizontalAlignment="Center">
+                            <materialDesign:PackIcon Kind="FileSearch" Width="40" Height="40"
+                                                     Foreground="{DynamicResource Accent}" Opacity="0.7"
+                                                     HorizontalAlignment="Center"
+                                                     VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="{DynamicResource L_NoDocument}" Margin="0,16,0,4"
+                                   FontWeight="Bold" FontSize="15"
+                                   HorizontalAlignment="Center"
+                                   Foreground="{DynamicResource Text.Primary}"/>
+                        <TextBlock Text="{DynamicResource L_NotSelected}" HorizontalAlignment="Center"
+                                   FontSize="13" Foreground="{DynamicResource Text.Secondary}"/>
+                        <TextBlock Text="{DynamicResource L_ClickForDetails}"
+                                   TextAlignment="Center" Foreground="{DynamicResource Text.Tertiary}"
+                                   FontSize="12" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                    </StackPanel>
+
+                    <!-- Detail card -->
+                    <materialDesign:Card UniformCornerRadius="0"
+                                         materialDesign:ElevationAssist.Elevation="Dp0"
+                                         Background="{DynamicResource Bg.Sunken}">
+                        <materialDesign:Card.Style>
+                            <Style TargetType="materialDesign:Card">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedDocument}"
+                                                 Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </materialDesign:Card.Style>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      Background="Transparent" Cursor="Hand"
+                                      MouseLeftButtonUp="SelectedThumb_Click">
+                            <StackPanel>
+                                <!-- Thumbnail -->
+                                <Border Height="200" ClipToBounds="True"
+                                        Background="Transparent" Cursor="Hand"
+                                        ToolTip="{DynamicResource L_OpenFullView}"
+                                        MouseLeftButtonUp="SelectedThumb_Click">
+                                    <Grid>
+                                        <Border Background="{DynamicResource Bg.Sunken}"/>
+
+                                        <!-- Rezervni prikaz - samo kada slicice nema -->
+                                        <StackPanel VerticalAlignment="Center"
+                                                    HorizontalAlignment="Center">
+                                            <StackPanel.Style>
+                                                <Style TargetType="StackPanel">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding SelectedDocument.Thumbnail}"
+                                                                     Value="{x:Null}">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </StackPanel.Style>
+
+                                            <materialDesign:PackIcon Kind="FileDocumentOutline"
+                                                                     Width="52" Height="52"
+                                                                     Foreground="{DynamicResource Text.Tertiary}"
+                                                                     HorizontalAlignment="Center"/>
+                                            <TextBlock Text="{DynamicResource L_PreviewUnavailable}"
+                                                       FontSize="11"
+                                                       Foreground="{DynamicResource Text.Tertiary}"
+                                                       HorizontalAlignment="Center"
+                                                       Margin="0,8,0,0" FontWeight="Medium"/>
+                                        </StackPanel>
+
+                                        <Image Source="{Binding SelectedDocument.Thumbnail}"
+                                               Stretch="UniformToFill"
+                                               RenderOptions.BitmapScalingMode="HighQuality"/>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Accent line -->
+                                <Border Height="4">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                            <GradientStop Color="{DynamicResource Color.Accent}" Offset="0"/>
+                                            <GradientStop Color="{DynamicResource Color.AccentLight}" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Border.Background>
+                                </Border>
+
+                                <!-- Metadata -->
+                                <StackPanel Margin="20,16,20,20">
+                                    <TextBlock Text="{DynamicResource L_Title}"
+                                               Style="{StaticResource DetailLabel}"/>
+                                    <TextBlock Text="{Binding SelectedDocument.Title}"
+                                               FontSize="15" FontWeight="Bold"
+                                               Foreground="{DynamicResource Text.Primary}"
+                                               TextWrapping="Wrap" LineHeight="22"/>
+
+                                    <TextBlock Text="{DynamicResource L_Date}"
+                                               Style="{StaticResource DetailLabel}"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="CalendarOutline"
+                                                                 Width="14" Height="14"
+                                                                 Foreground="{DynamicResource Text.Secondary}"
+                                                                 VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding SelectedDocument.CreatedFormatted}"
+                                                   FontSize="13"
+                                                   Foreground="{DynamicResource Text.Primary}"
+                                                   Margin="6,0,0,0"/>
+                                    </StackPanel>
+
+                                    <TextBlock Text="{DynamicResource L_Correspondent}"
+                                               Style="{StaticResource DetailLabel}"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="AccountOutline"
+                                                                 Width="14" Height="14"
+                                                                 Foreground="{DynamicResource Text.Secondary}"
+                                                                 VerticalAlignment="Center"/>
+                                        <TextBlock FontSize="13"
+                                                   Foreground="{DynamicResource Text.Primary}"
+                                                   Margin="6,0,0,0">
+                                            <TextBlock.Text>
+                                                <Binding Path="SelectedDocument.CorrespondentName"
+                                                         TargetNullValue="—"
+                                                         FallbackValue="—"/>
+                                            </TextBlock.Text>
+                                        </TextBlock>
+                                    </StackPanel>
+
+                                    <TextBlock Text="{DynamicResource L_DocType}"
+                                               Style="{StaticResource DetailLabel}"/>
+                                    <Border Background="{DynamicResource Accent.Subtle}" BorderBrush="{DynamicResource Accent.Border}"
+                                            BorderThickness="1" CornerRadius="7"
+                                            Padding="10,4" HorizontalAlignment="Left">
+                                        <TextBlock FontSize="12" Foreground="{DynamicResource Accent.Text}"
+                                                   FontWeight="SemiBold">
+                                            <TextBlock.Text>
+                                                <Binding Path="SelectedDocument.DocumentTypeName"
+                                                         TargetNullValue="—"
+                                                         FallbackValue="—"/>
+                                            </TextBlock.Text>
+                                        </TextBlock>
+                                    </Border>
+
+                                    <TextBlock Text="{DynamicResource L_TagsCaps}"
+                                               Style="{StaticResource DetailLabel}"/>
+                                    <ItemsControl ItemsSource="{Binding SelectedDocument.TagNames}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border CornerRadius="6"
+                                                        Margin="0,0,5,5" Padding="9,4"
+                                                        Background="{Binding Converter={StaticResource TagColour}}">
+                                                    <TextBlock Text="{Binding}" FontSize="11"
+                                                               Foreground="{Binding Converter={StaticResource TagContrast}}"
+                                                               FontWeight="SemiBold"/>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <Border Height="1" Background="{DynamicResource Border.Subtle}"
+                                            Margin="0,8,0,0"/>
+
+                                    <TextBlock Text="{DynamicResource L_OcrContent}"
+                                               Style="{StaticResource DetailLabel}"/>
+                                    <Border Background="{DynamicResource Accent.Subtle}" Padding="12"
+                                            CornerRadius="10"
+                                            BorderBrush="{DynamicResource Accent.Border}" BorderThickness="1">
+                                        <TextBlock Text="{Binding SelectedDocument.Content}"
+                                                   TextWrapping="Wrap" FontSize="11"
+                                                   Foreground="{DynamicResource Text.Primary}"
+                                                   LineHeight="18" MaxHeight="160"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </Border>
+
+                                    <Border Height="1" Background="{DynamicResource Border.Subtle}"
+                                            Margin="0,16,0,0"/>
+
+                                    <TextBlock Text="{DynamicResource L_Actions}"
+                                               Style="{StaticResource DetailLabel}"/>
+
+                                    <Button Command="{Binding ToggleFavoriteCommand}"
+                                            CommandParameter="{Binding SelectedDocument.Id}"
+                                            Height="42" Margin="0,0,0,8"
+                                            HorizontalAlignment="Stretch"
+                                            materialDesign:ButtonAssist.CornerRadius="10"
+                                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                                            BorderBrush="#F5A524" Foreground="#B97A00">
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon Width="16" Height="16"
+                                                                     Margin="0,0,8,0"
+                                                                     VerticalAlignment="Center">
+                                                <materialDesign:PackIcon.Style>
+                                                    <Style TargetType="materialDesign:PackIcon">
+                                                        <Setter Property="Kind" Value="StarOutline"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding SelectedDocument.IsFavorite}" Value="True">
+                                                                <Setter Property="Kind" Value="Star"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </materialDesign:PackIcon.Style>
+                                            </materialDesign:PackIcon>
+                                            <TextBlock FontWeight="Bold" FontSize="11">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="{DynamicResource L_SaveDoc}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding SelectedDocument.IsFavorite}" Value="True">
+                                                                <Setter Property="Text" Value="{DynamicResource L_UnsaveDoc}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button Command="{Binding OpenDetailWindowCommand}"
+                                            CommandParameter="{Binding SelectedDocument.Id}"
+                                            Height="42" Margin="0,0,0,8"
+                                            Background="{DynamicResource Accent}" BorderBrush="{DynamicResource Accent}"
+                                            Foreground="{DynamicResource Text.OnAccent}"
+                                            HorizontalAlignment="Stretch"
+                                            materialDesign:ButtonAssist.CornerRadius="10"
+                                            Style="{StaticResource MaterialDesignRaisedButton}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon Kind="OpenInNew"
+                                                                     Width="16" Height="16"
+                                                                     Margin="0,0,8,0"/>
+                                            <TextBlock Text="{DynamicResource L_OpenDocument}"
+                                                       FontWeight="Bold" FontSize="11"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button Command="{Binding DownloadCommand}"
+                                            Height="42"
+                                            Background="{DynamicResource Accent}" BorderBrush="{DynamicResource Info}"
+                                            Foreground="{DynamicResource Text.OnAccent}"
+                                            HorizontalAlignment="Stretch"
+                                            materialDesign:ButtonAssist.CornerRadius="10"
+                                            Style="{StaticResource MaterialDesignRaisedButton}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon Kind="Download"
+                                                                     Width="16" Height="16"
+                                                                     Margin="0,0,8,0"/>
+                                            <TextBlock Text="{DynamicResource L_DownloadDocument}"
+                                                       FontWeight="Bold" FontSize="11"/>
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </materialDesign:Card>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Toast obavjestenja - uvijek iznad sadrzaja -->
+        <views:NotificationHost Grid.RowSpan="99" Grid.ColumnSpan="99"
+                                Panel.ZIndex="1000"/>
+    </Grid>
+</Window>

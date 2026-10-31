@@ -1,0 +1,40 @@
+﻿<UserControl x:Class="HCI_2025_Project_Template.Views.PdfPreviewView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf">
+
+    <Grid Background="#F8FAFC">
+        <wv2:WebView2 x:Name="Browser" Visibility="Collapsed"/>
+
+        <!-- Ucitavanje -->
+        <StackPanel x:Name="LoadingPanel"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+            <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}"
+                         Value="0" IsIndeterminate="True"
+                         Width="40" Height="40"/>
+            <TextBlock Text="Učitavanje dokumenta..."
+                       Margin="0,14,0,0" FontSize="13"
+                       Foreground="#64748B" HorizontalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Greska / prazno stanje -->
+        <StackPanel x:Name="ErrorPanel" Visibility="Collapsed"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    MaxWidth="300">
+            <materialDesign:PackIcon Kind="FileDocumentAlertOutline"
+                                     Width="48" Height="48"
+                                     Foreground="#CBD5E1"
+                                     HorizontalAlignment="Center"/>
+            <TextBlock x:Name="ErrorText"
+                       Text="Pregled nije dostupan"
+                       Margin="0,12,0,0" FontSize="14" FontWeight="SemiBold"
+                       Foreground="#475569"
+                       TextAlignment="Center" TextWrapping="Wrap"/>
+            <TextBlock Text="Dokument možete preuzeti i otvoriti u vašem čitaču."
+                       Margin="0,6,0,0" FontSize="12"
+                       Foreground="#94A3B8"
+                       TextAlignment="Center" TextWrapping="Wrap"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

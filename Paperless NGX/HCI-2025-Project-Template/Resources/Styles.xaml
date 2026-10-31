@@ -1,0 +1,321 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib"
+                    xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes">
+
+    <!-- ════════════════════════════════════════════════════════════════
+         RAZMACI - skala 4 / 8 / 12 / 16 / 24 / 32
+         Koristi iskljucivo ove vrijednosti umjesto proizvoljnih margina.
+         ════════════════════════════════════════════════════════════════ -->
+    <Thickness x:Key="Pad.Xs">4</Thickness>
+    <Thickness x:Key="Pad.Sm">8</Thickness>
+    <Thickness x:Key="Pad.Md">12</Thickness>
+    <Thickness x:Key="Pad.Lg">16</Thickness>
+    <Thickness x:Key="Pad.Xl">24</Thickness>
+    <Thickness x:Key="Pad.Page">28,24,28,24</Thickness>
+    <Thickness x:Key="Pad.Card">20,16,20,16</Thickness>
+
+    <CornerRadius x:Key="Radius.Sm">6</CornerRadius>
+    <CornerRadius x:Key="Radius.Md">10</CornerRadius>
+    <CornerRadius x:Key="Radius.Lg">16</CornerRadius>
+    <CornerRadius x:Key="Radius.Pill">999</CornerRadius>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         TIPOGRAFIJA - sest nivoa, nista izvan njih
+         ════════════════════════════════════════════════════════════════ -->
+
+    <!-- Naslov ekrana -->
+    <Style x:Key="T.Display" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="27"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+    </Style>
+
+    <!-- Naslov sekcije -->
+    <Style x:Key="T.Heading" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="17"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+    </Style>
+
+    <!-- Naslov kartice -->
+    <Style x:Key="T.Title" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+    </Style>
+
+    <!-- Osnovni tekst -->
+    <Style x:Key="T.Body" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+        <Setter Property="LineHeight" Value="20"/>
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+    </Style>
+
+    <!-- Metapodaci, potpisi -->
+    <Style x:Key="T.Caption" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="11.5"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+    </Style>
+
+    <!-- Natpis rubrike: NASLOV, DATUM, TAGOVI -->
+    <Style x:Key="T.Overline" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text.Tertiary}"/>
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+    </Style>
+
+    <!-- Natpis rubrike u akcentnoj boji -->
+    <Style x:Key="T.OverlineAccent" TargetType="TextBlock"
+           BasedOn="{StaticResource T.Overline}">
+        <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+    </Style>
+
+    <!-- Velik broj na statistickoj kartici -->
+    <Style x:Key="T.Stat" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="30"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+    </Style>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         POVRSINE
+         ════════════════════════════════════════════════════════════════ -->
+
+    <Style x:Key="Card.Surface" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource Bg.Surface}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Border.Subtle}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="16"/>
+        <Setter Property="Padding" Value="20,16"/>
+        <Setter Property="Effect" Value="{DynamicResource Shadow.Card}"/>
+    </Style>
+
+    <!-- Kartica koja reaguje na prelazak misem: podize se i dobija akcentnu ivicu -->
+    <Style x:Key="Card.Interactive" TargetType="Border"
+           BasedOn="{StaticResource Card.Surface}">
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <TranslateTransform Y="0"/>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource Accent.Border}"/>
+                <Setter Property="Effect" Value="{DynamicResource Shadow.Raised}"/>
+                <Trigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetProperty="RenderTransform.Y"
+                                             To="-3" Duration="0:0:0.16"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </Trigger.EnterActions>
+                <Trigger.ExitActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetProperty="RenderTransform.Y"
+                                             To="0" Duration="0:0:0.16"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </Trigger.ExitActions>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Udubljeno polje: OCR kutije, read-only vrijednosti -->
+    <Style x:Key="Box.Sunken" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource Bg.Sunken}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Border.Subtle}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="10"/>
+        <Setter Property="Padding" Value="12,9"/>
+    </Style>
+
+    <!-- Oznaka / cip -->
+    <Style x:Key="Chip" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource Accent.Subtle}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Accent.Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="Padding" Value="8,3"/>
+        <Setter Property="Margin" Value="0,0,6,6"/>
+    </Style>
+
+    <Style x:Key="T.Chip" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="10.5"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource Accent.Text}"/>
+    </Style>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         DUGMAD
+         ════════════════════════════════════════════════════════════════ -->
+
+    <Style x:Key="Btn.Primary" TargetType="Button"
+           BasedOn="{StaticResource MaterialDesignRaisedButton}">
+        <Setter Property="Height" Value="38"/>
+        <Setter Property="Padding" Value="18,0"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Background" Value="{DynamicResource Accent}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text.OnAccent}"/>
+        <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="10"/>
+        <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp2"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Accent.Hover}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource Accent.Hover}"/>
+                <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp6"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="Btn.Secondary" TargetType="Button"
+           BasedOn="{StaticResource MaterialDesignOutlinedButton}">
+        <Setter Property="Height" Value="38"/>
+        <Setter Property="Padding" Value="16,0"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Accent.Border}"/>
+        <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="10"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Accent.Subtle}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="Btn.Ghost" TargetType="Button"
+           BasedOn="{StaticResource MaterialDesignFlatButton}">
+        <Setter Property="Height" Value="34"/>
+        <Setter Property="Padding" Value="12,0"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
+        <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="8"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Bg.Sunken}"/>
+                <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="Btn.Danger" TargetType="Button"
+           BasedOn="{StaticResource MaterialDesignFlatButton}">
+        <Setter Property="Height" Value="34"/>
+        <Setter Property="Padding" Value="12,0"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Foreground" Value="{DynamicResource Danger}"/>
+        <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="8"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Danger.Subtle}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         BOCNA NAVIGACIJA
+         Aktivna stavka dobija punu podlogu i traku uz lijevu ivicu.
+         ════════════════════════════════════════════════════════════════ -->
+
+    <Style x:Key="Nav.SectionLabel" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="9.5"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text.OnShellDim}"/>
+        <Setter Property="Margin" Value="14,20,14,6"/>
+    </Style>
+
+    <Style x:Key="Nav.Item" TargetType="Button"
+           BasedOn="{StaticResource MaterialDesignFlatButton}">
+        <Setter Property="Height" Value="42"/>
+        <Setter Property="Margin" Value="6,2"/>
+        <Setter Property="Padding" Value="12,0"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text.OnShell}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="10"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Bg.ShellHover}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         UNOS
+         ════════════════════════════════════════════════════════════════ -->
+
+    <Style x:Key="Input.Text" TargetType="TextBox"
+           BasedOn="{StaticResource MaterialDesignOutlinedTextBox}">
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+        <Setter Property="materialDesign:TextFieldAssist.TextBoxViewMargin" Value="2,0,2,0"/>
+    </Style>
+
+    <Style x:Key="Input.Combo" TargetType="ComboBox"
+           BasedOn="{StaticResource MaterialDesignOutlinedComboBox}">
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+    </Style>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         POMOCNO
+         ════════════════════════════════════════════════════════════════ -->
+
+    <!-- Tanka akcentna traka ispod slika i zaglavlja -->
+    <Style x:Key="AccentRule" TargetType="Border">
+        <Setter Property="Height" Value="3"/>
+        <Setter Property="Background" Value="{DynamicResource Accent.Gradient}"/>
+    </Style>
+
+    <Style x:Key="Divider" TargetType="Border">
+        <Setter Property="Height" Value="1"/>
+        <Setter Property="Background" Value="{DynamicResource Border.Subtle}"/>
+        <Setter Property="Margin" Value="0,16"/>
+    </Style>
+
+    <!-- Blagi ulaz sadrzaja pri promjeni ekrana -->
+    <Style x:Key="ViewEnter" TargetType="FrameworkElement">
+        <Style.Triggers>
+            <EventTrigger RoutedEvent="Loaded">
+                <BeginStoryboard>
+                    <Storyboard>
+                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                         From="0" To="1" Duration="0:0:0.22"/>
+                        <DoubleAnimation
+                            Storyboard.TargetProperty="(FrameworkElement.RenderTransform).(TranslateTransform.Y)"
+                            From="10" To="0" Duration="0:0:0.22">
+                            <DoubleAnimation.EasingFunction>
+                                <CubicEase EasingMode="EaseOut"/>
+                            </DoubleAnimation.EasingFunction>
+                        </DoubleAnimation>
+                    </Storyboard>
+                </BeginStoryboard>
+            </EventTrigger>
+        </Style.Triggers>
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <TranslateTransform Y="0"/>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>

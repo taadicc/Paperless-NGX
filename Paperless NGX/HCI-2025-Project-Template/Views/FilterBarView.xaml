@@ -1,0 +1,166 @@
+﻿<UserControl x:Class="HCI_2025_Project_Template.Views.FilterBarView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolVis"/>
+
+        <!-- Plutajuci natpis traži visinu; na 38px se odsijecao -->
+        <Style x:Key="FilterCombo" TargetType="ComboBox"
+               BasedOn="{StaticResource MaterialDesignOutlinedComboBox}">
+            <Setter Property="Height" Value="46"/>
+            <Setter Property="MinWidth" Value="190"/>
+            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+            <Setter Property="materialDesign:HintAssist.FloatingScale" Value="0.72"/>
+            <Setter Property="materialDesign:HintAssist.FloatingOffset" Value="0,-20"/>
+            <Setter Property="materialDesign:TextFieldAssist.TextFieldCornerRadius" Value="10"/>
+        </Style>
+    </UserControl.Resources>
+
+    <!-- Filter bar — pojavljuje se ispod toolbara kad ima podataka -->
+    <Border Background="{DynamicResource Bg.Surface}" CornerRadius="14" Padding="16,14"
+            BorderBrush="{DynamicResource Accent.Border}" BorderThickness="1"
+            Margin="0,0,0,10">
+        <DockPanel LastChildFill="False">
+
+            <!-- Lijevo: Label + filteri -->
+            <StackPanel DockPanel.Dock="Left" Orientation="Horizontal"
+                        VerticalAlignment="Center">
+
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                            Margin="0,0,16,0">
+                    <materialDesign:PackIcon Kind="FilterVariant" Width="16" Height="16"
+                                             Foreground="{DynamicResource Accent}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{DynamicResource L_Filter}" FontSize="10" FontWeight="Bold"
+                               Foreground="{DynamicResource Accent}" Margin="6,0,0,0"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Tag filter -->
+                <Grid Margin="0,0,10,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <ComboBox Style="{StaticResource FilterCombo}"
+                          ItemsSource="{Binding Tags}"
+                          SelectedValuePath="Id"
+                          SelectedValue="{Binding SelectedTagId}"
+                          DisplayMemberPath="Name"
+                          
+                          materialDesign:HintAssist.Hint="{DynamicResource L_TagSingular}"
+                          materialDesign:HintAssist.Foreground="{DynamicResource Text.Tertiary}">
+                    </ComboBox>
+                    <Button Grid.Column="0"
+                            Command="{Binding ClearOneCommand}"
+                            CommandParameter="tag"
+                            Style="{StaticResource MaterialDesignIconButton}"
+                            Width="24" Height="24" Margin="0,0,30,0"
+                            HorizontalAlignment="Right" VerticalAlignment="Center"
+                            Panel.ZIndex="5"
+                            ToolTip="{DynamicResource L_ClearFilters}"
+                            Foreground="{DynamicResource Text.Tertiary}"
+                            Visibility="{Binding HasTagFilter, Converter={StaticResource BoolVis}}">
+                        <materialDesign:PackIcon Kind="CloseCircle" Width="14" Height="14"/>
+                    </Button>
+                </Grid>
+
+                <!-- Correspondent filter -->
+                <Grid Margin="0,0,10,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <ComboBox Style="{StaticResource FilterCombo}"
+                          ItemsSource="{Binding Correspondents}"
+                          SelectedValuePath="Id"
+                          SelectedValue="{Binding SelectedCorrespondentId}"
+                          DisplayMemberPath="Name"
+                          
+                          materialDesign:HintAssist.Hint="{DynamicResource L_CorrespondentPlain}"
+                          materialDesign:HintAssist.Foreground="{DynamicResource Text.Tertiary}">
+                    </ComboBox>
+                    <Button Grid.Column="0"
+                            Command="{Binding ClearOneCommand}"
+                            CommandParameter="correspondent"
+                            Style="{StaticResource MaterialDesignIconButton}"
+                            Width="24" Height="24" Margin="0,0,30,0"
+                            HorizontalAlignment="Right" VerticalAlignment="Center"
+                            Panel.ZIndex="5"
+                            ToolTip="{DynamicResource L_ClearFilters}"
+                            Foreground="{DynamicResource Text.Tertiary}"
+                            Visibility="{Binding HasCorrespondentFilter, Converter={StaticResource BoolVis}}">
+                        <materialDesign:PackIcon Kind="CloseCircle" Width="14" Height="14"/>
+                    </Button>
+                </Grid>
+
+                <!-- Document type filter -->
+                <Grid Margin="0,0,10,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <ComboBox Style="{StaticResource FilterCombo}"
+                          ItemsSource="{Binding DocumentTypes}"
+                          SelectedValuePath="Id"
+                          SelectedValue="{Binding SelectedDocumentTypeId}"
+                          DisplayMemberPath="Name"
+                          
+                          materialDesign:HintAssist.Hint="{DynamicResource L_DocTypePlain}"
+                          materialDesign:HintAssist.Foreground="{DynamicResource Text.Tertiary}">
+                    </ComboBox>
+                    <Button Grid.Column="0"
+                            Command="{Binding ClearOneCommand}"
+                            CommandParameter="type"
+                            Style="{StaticResource MaterialDesignIconButton}"
+                            Width="24" Height="24" Margin="0,0,30,0"
+                            HorizontalAlignment="Right" VerticalAlignment="Center"
+                            Panel.ZIndex="5"
+                            ToolTip="{DynamicResource L_ClearFilters}"
+                            Foreground="{DynamicResource Text.Tertiary}"
+                            Visibility="{Binding HasDocumentTypeFilter, Converter={StaticResource BoolVis}}">
+                        <materialDesign:PackIcon Kind="CloseCircle" Width="14" Height="14"/>
+                    </Button>
+                </Grid>
+
+            </StackPanel>
+
+            <!-- Desno: primijeni i ocisti -->
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
+                        VerticalAlignment="Center">
+
+                <Button Command="{Binding ApplyFiltersCommand}"
+                        Style="{StaticResource Btn.Primary}"
+                        Height="46" Margin="0,0,8,0">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="Check" Width="16" Height="16"
+                                                 Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="{DynamicResource L_ApplyFilters}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <Button Command="{Binding ClearFiltersCommand}"
+                        Style="{StaticResource Btn.Ghost}"
+                        Height="46" Padding="14,0"
+                        ToolTip="{DynamicResource L_ClearFilters}"
+                        Visibility="{Binding HasActiveFilters,
+                            Converter={StaticResource BoolVis}}">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="FilterRemoveOutline"
+                                                 Width="16" Height="16"
+                                                 VerticalAlignment="Center"/>
+                        <TextBlock Text="{DynamicResource L_ClearFilters}"
+                                   Margin="8,0,0,0" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+            </StackPanel>
+
+        </DockPanel>
+    </Border>
+</UserControl>

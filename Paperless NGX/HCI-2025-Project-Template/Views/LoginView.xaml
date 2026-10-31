@@ -1,0 +1,61 @@
+﻿<Window x:Class="HCI_2025_Project_Template.Views.LoginView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:viewModels="clr-namespace:HCI_2025_Project_Template.ViewModels"
+        Title="Paperless Login" Height="520" Width="400"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource MaterialDesignPaper}"
+        FocusManager.FocusedElement="{Binding ElementName=UserTextBox}">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    </Window.Resources>
+
+    <Window.DataContext>
+        <viewModels:LoginViewModel />
+    </Window.DataContext>
+
+    <Grid>
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="320">
+
+            <materialDesign:PackIcon Kind="Leaf" Width="60" Height="60" 
+                                    HorizontalAlignment="Center" 
+                                    Foreground="{DynamicResource PrimaryHueMidBrush}" 
+                                    Margin="0,0,0,20"/>
+
+            <TextBlock Text="Paperless NGX" FontSize="32" FontWeight="ExtraBold" 
+                       Foreground="{DynamicResource PrimaryHueDarkBrush}"
+                       HorizontalAlignment="Center" Margin="0,0,0,10"/>
+
+            <TextBlock Text="{DynamicResource L_LoginSubtitle}" FontSize="16" Opacity="0.5"
+                       HorizontalAlignment="Center" Margin="0,0,0,40"/>
+
+            <TextBox x:Name="UserTextBox"
+                     materialDesign:HintAssist.Hint="{DynamicResource L_Username}" 
+                     Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"
+                     Style="{StaticResource MaterialDesignOutlinedTextBox}" 
+                     materialDesign:TextFieldAssist.HasClearButton="True"
+                     FontSize="16" Margin="0,0,0,20"/>
+
+            <PasswordBox x:Name="LozinkaBox"
+                         materialDesign:HintAssist.Hint="{DynamicResource L_Password}" 
+                         Style="{StaticResource MaterialDesignOutlinedRevealPasswordBox}" 
+                         FontSize="16" Margin="0,0,0,30"/>
+
+            <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}"
+                         IsIndeterminate="True"
+                         Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"
+                         Margin="0,0,0,20" />
+
+            <Button Content="{DynamicResource L_SignIn}" 
+                    Command="{Binding LoginCommand}"
+                    CommandParameter="{Binding ElementName=LozinkaBox}"
+                    materialDesign:ButtonAssist.CornerRadius="25"
+                    IsDefault="True" 
+                    Height="50" FontSize="16"
+                    Style="{StaticResource MaterialDesignRaisedButton}"/>
+
+        </StackPanel>
+    </Grid>
+</Window>
